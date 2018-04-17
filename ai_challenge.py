@@ -8,6 +8,7 @@ opt = "train" # train/predict
 data_src = "sample" # sample/challenge/scoring
 alg = "random_forest" # random_forest/logistic_regression
 encoder = "one_hot_encoder" # one_hot_encoder/label_encoder
+save_feature_names_post_encoder = True
 
 if data_src == "sample":
     feature_prefix = "sample_set"
@@ -90,7 +91,11 @@ def encode(encoder, df, fnames):
 
     return df_encoded
 
-#def train(df, fnames, target_name, save_model=False):
+def save_feature_names_post_encoder(encoder, df):
+    titles = pd.DataFrame(list(df))
+    filename = "feature_names_post_encoder_" + encoder + ".tsv"
+    titles.to_csv(filename, sep='\t')
+
 def train(X, y, save_model=False):
     print("Splitting data sets")
     from sklearn.model_selection import train_test_split
@@ -217,6 +222,10 @@ def main():
     df, fnames, target_name = preprocess()
 
     X = encode(encoder, df, fnames)
+
+    if save_feature_names_post_encoder:
+        save_feature_names_post_encoder(encoder, X)
+
     y = df[target_name]
 
     if opt == "train":
