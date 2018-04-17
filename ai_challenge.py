@@ -7,6 +7,7 @@ from sklearn import datasets
 opt = "train" # train/predict
 data_src = "sample" # sample/challenge/scoring
 alg = "random_forest" # random_forest/logistic_regression
+encoder = "one_hot_encoder" # one_hot_encoder/label_encoder
 
 if data_src == "sample":
     feature_prefix = "sample_set"
@@ -76,44 +77,60 @@ def preprocess():
     df = df.fillna(0)
 
     return (df, fnames, target_name)
-    
-def train(df, fnames, target_name, save_model=False):
-    if opt == "train":
-        print("Splitting data sets")
-        from sklearn.model_selection import train_test_split
-        X_train, X_test, y_train, y_test = train_test_split(
-            pd.get_dummies(df[fnames]),
-            df[target_name],
-            #iris.target,
-            test_size=0.5,
-            stratify=df[target_name],
-            #stratify=iris.target,
-            random_state=123456)
-        
-        print("X_train: {}".format(X_train.shape))
-        print("X_test: {}".format(X_test.shape))
-    
-        print("Training model")
-        if alg == "random_forest":
-            from sklearn.ensemble import RandomForestClassifier
-            model = RandomForestClassifier(n_estimators=100, oob_score=True, random_state=123456)
-        elif alg == "logistic_regression":
-            from sklearn.linear_model import LogisticRegression
-            model = LogisticRegression()
-        else:
-            print("Algorithm not recognized")
-            exit(1)
-        model.fit(X_train, y_train)
-    
-        if save_model:
-            from sklearn.externals import joblib
-            model_file = ''
-            if data_src == "sample":
-                model_file = 'rf_model_sample.pkl'
-            else:
-                model_file = 'rf_model_challenge.pkl'
 
-            joblib.dump(model, model_file) 
+def encode(encoder, df, fnames):
+    df_encoded = None
+    if encoder == 'one_hot_encoder':
+        df_encoded = pd.get_dummies(df[fnames])
+    elif encoder == 'label_encoder':
+        pass
+    else:
+        print("Error: Encoder not recognized")
+        exit(1)
+
+    return df_encoded
+
+#def train(df, fnames, target_name, save_model=False):
+def train(X, y, save_model=False):
+    print("Splitting data sets")
+    from sklearn.model_selection import train_test_split
+    X_train, X_test, y_train, y_test = train_test_split(
+        #pd.get_dummies(df[fnames]),
+        X,
+        #df[target_name],
+        y,
+        #iris.target,
+        test_size=0.5,
+        #stratify=df[target_name],
+        stratify=y,
+        #stratify=iris.target,
+        random_state=123456)
+
+    print("X_train: {}".format(X_train.shape))
+    print("X_test: {}".format(X_test.shape))
+    
+    print("Training model")
+    if alg == "random_forest":
+        from sklearn.ensemble import RandomForestClassifier
+        model = RandomForestClassifier(n_estimators=100, oob_score=True, random_state=123456)
+    elif alg == "logistic_regression":
+        from sklearn.linear_model import LogisticRegression
+        model = LogisticRegression()
+    else:
+        print("Algorithm not recognized")
+        exit(1)
+    model.fit(X_train, y_train)
+
+    if save_model:
+        from sklearn.externals import joblib
+        model_file = ''
+        if data_src == "sample":
+            model_file = 'rf_model_sample.pkl'
+        else:
+            model_file = 'rf_model_challenge.pkl'
+
+        joblib.dump(model, model_file) 
+
     return (model, X_test, y_test)
 
 def predict_and_assess(model, X_test, y_test):
@@ -199,8 +216,11 @@ def main():
 
     df, fnames, target_name = preprocess()
 
+    X = encode(encoder, df, fnames)
+    y = df[target_name]
+
     if opt == "train":
-        model, X_test, y_test = train(df, fnames, target_name)
+        model, X_test, y_test = train(X, y)
         predict_and_assess(model, X_test, y_test)
 
     elif opt == "predict":
@@ -208,3 +228,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
